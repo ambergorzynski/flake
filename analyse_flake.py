@@ -1,7 +1,50 @@
 import pandas as pd
 import os
 import subprocess
+import argparse
 from pathlib import Path 
+
+  
+def main():
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('output_dir',
+        type=Path,
+        help='Absolute path to the location of raw CTS output')
+    parser.add_argument('n_runs',
+        type = int,
+        default = 5,
+        help='Number of CTS files to analyse')
+
+    args = parser.parse_args()
+
+    output_dir = Path(args.output_dir)
+
+    flaky_csv = Path(output_dir, 'flaky_tests.csv')
+    all_csv = Path(output_dir, 'all_results.csv')
+
+    output_raw = [Path(output_dir, f'output_raw_{i}.txt') for i in range(args.n_runs)]
+    output_tests = [Path(output_dir, f'output_tests_{i}.txt') for i in range(args.n_runs)]
+    output_summary = [Path(output_dir, f'output_summary_{i}.txt') for i in range(args.n_runs)]
+
+    # Process raw results
+    for i in range(args.n_runs):
+        print(f'Processing data from run {i}...')
+        process_raw_results(output_raw[i], output_tests[i], output_summary[i])
+
+    merge_run_results(output_tests, all_csv)    
+
+    find_flaky_tests(all_csv, flaky_csv)
+
+    # Load processed results
+    flaky_df = pd.read_csv(flaky_csv, sep='\t')
+    all_df = pd.read_csv(all_csv, sep='\t')
+    
+    all_tests = all_df['test'].to_list()
+    n_tests = len(all_tests)
+
+    # Analyse results at most granular level (test x parameters)
+    analyse(flaky_df, args.n_runs, n_tests)
 
 def process_raw_results(raw_output : Path, test_output : Path, summary_output : Path):
 
@@ -151,37 +194,6 @@ def analyse(flaky_df, n_runs, n_tests):
 
     # Report results
     report_results(n_flakes, n_runs, n_tests, n_tests_that_only_flake_once, n_tests_that_flake_more_than_once)
-  
-def main():
-    n_runs = 10
-
-    base = Path('/home/ubuntu/dev')
-    output_dir = Path(base, 'data', 'cts_results', 'output_150525')
-    
-    flaky_csv = Path(output_dir, 'flaky_tests.csv')
-    all_csv = Path(output_dir, 'all_results.csv')
-
-    outputs_raw = [Path(output_dir, f'output_raw_{i}.txt') for i in range(n_runs)]
-    outputs_tests = [Path(output_dir, f'output_tests_{i}.txt') for i in range(n_runs)]
-    outputs_summary = [Path(output_dir, f'output_summary_{i}.txt') for i in range(n_runs)]
-
-    # Process raw results
-    for i in range(n_runs):
-        process_raw_results(outputs_raw[i], output_tests[i], output_summary[i])
-
-    merge_run_results(outputs_raw, all_csv)    
-
-    find_flaky_tests(all_csv, flaky_csv)
-
-    # Load processed results
-    flaky_df = pd.read_csv(flaky_csv, sep='\t')
-    all_df = pd.read_csv(all_csv, sep='\t')
-    
-    all_tests = all_df['test'].to_list()
-    n_tests = len(all_tests)
-
-    # Analyse results at most granular level (test x parameters)
-    analyse(flaky_df, n_runs, n_tests)
 
 if __name__=="__main__":
     main()
