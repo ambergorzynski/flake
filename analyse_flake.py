@@ -128,7 +128,7 @@ def merge_run_results(output_tests : list[Path], output_name : str):
     print(f'Results df has length: {results.shape[0]}')
     nan_mask = results.isna().any(axis=1)
     nan_rows = results[nan_mask]
-    if len(nan_rows > 0):
+    if len(nan_rows) > 0:
         print(f'Tests missing from run! Number of NaN results is: {nan_rows.shape[0]}')
         print(f'NaN rows:')
         print(nan_rows)
@@ -196,6 +196,13 @@ def analyse(flaky_df, n_runs, n_tests):
     passes = flaky_df['n_pass'].value_counts()
     fails = flaky_df['n_fail'].value_counts()
 
+    print('\nPass distribution:')
+    print(passes)
+
+    print('\Fail distribution:')
+    print(fails)
+
+    exit()
     assert ((passes[1] + passes[n_runs - 1]) == (fails[1] + fails[n_runs - 1]))
 
     n_tests_that_only_flake_once = passes[1] + passes[n_runs - 1]
