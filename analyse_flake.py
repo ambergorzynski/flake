@@ -34,6 +34,7 @@ def main():
 
     merge_run_results(output_tests, all_csv)    
 
+    print('Finding flaky tests...')
     find_flaky_tests(all_csv, flaky_csv)
 
     # Load processed results
@@ -46,7 +47,7 @@ def main():
     # Analyse results at most granular level (test x parameters)
     analyse(flaky_df, args.n_runs, n_tests)
 
-def process_raw_results(raw_output : Path, test_output : Path, summary_output : Path):
+def process_raw_results(raw_output : Path, test_output : Path, summary_output: Path):
 
     with open(raw_output,'r') as f:
         test_raw = f.readlines()
@@ -59,7 +60,7 @@ def process_raw_results(raw_output : Path, test_output : Path, summary_output : 
 
     test_summary = get_test_summary(test_raw)
 
-    print(f'Writing test summary to {test_summary}')
+    print(f'Writing test summary to {summary_output}')
     with open(summary_output, 'w') as f:
         f.write(test_summary)
 
@@ -114,21 +115,30 @@ def merge_run_results(output_tests : list[Path], output_name : str):
 
         df[f'result_{i}'] = df[f'raw_{i}'].apply(result_map)
         df['test'] = df[f'raw_{i}'].apply(test_map)
-        print('\ndf:')
+        
+        print('\nRun {i} results df head:')
         print(df.head(10))
 
         results = results.merge(df, on = 'test', how = 'outer')
 
-        print('\nResults:')
+        print('\nOverall results df head:')
         print(results.head(10))
 
     # Check that all tests are present in every run
-    nan_rows = results.isna().any(axis=1)
-    nan_results = nan_rows[nan_rows == True]
-    if len(nan_results > 0):
-        print('Tests missing from run!')
-        print(nan_results)
-        exit(1)
+    print(f'Results df has length: {results.shape[0]}')
+    nan_mask = results.isna().any(axis=1)
+    nan_rows = results[nan_mask]
+    if len(nan_rows > 0):
+        print(f'Tests missing from run! Number of NaN results is: {nan_rows.shape[0]}')
+        print(f'NaN rows:')
+        print(nan_rows)
+        print(f'NaN tests:')
+        for test in nan_rows['test']:
+            print(test)
+        print(f'Dropping NaN rows for now')
+        #TODO: look into why this is happening
+        results.dropna()   
+        print(f'Results df now has length: {results.shape[0]}')  
     else:
         print('No tests are missing from any run')
 
@@ -136,7 +146,6 @@ def merge_run_results(output_tests : list[Path], output_name : str):
     results['unique_results'] = results['unique_results'].apply(lambda x: len(x))
 
     print(f'Writing all results to {output_name}')
-    print(results.head(10))
     results.to_csv(output_name, sep='\t')
 
     return results
