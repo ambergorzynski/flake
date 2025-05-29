@@ -10,13 +10,13 @@
 
 ## Run analysis of WebGPU CTS flakiness
 
-# Run the CTS multiple times
+### Run the CTS multiple times
 Update the relevant filepaths in `run_cts.py`
 ```
 python run_cts.py
 ```
 
-# Analyse the results
+### Analyse the results
 ```
 python -m venv venv
 source venv/bin/activate
